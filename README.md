@@ -1,4 +1,4 @@
-# Projeto de Grafos com Floyd-Warshall
+# Projeto Educacional de Grafos com Floyd-Warshall
 
 Este repositório contém uma implementação do algoritmo de Floyd-Warshall
 para cálculo de caminhos mínimos em grafos.
