@@ -47,3 +47,31 @@ def test_pred_initialization():
     # check trace return structure too
     d3, p3, steps3 = floyd_warshall([row[:] for row in dist], trace=True)
     assert steps3 and isinstance(steps3, list)
+
+def test_disconnected_graph():
+    # Grafo onde o vértice 2 está isolado
+    dist = [
+        [0, 5, float('inf')],
+        [5, 0, float('inf')],
+        [float('inf'), float('inf'), 0],
+    ]
+    d, p = floyd_warshall([row[:] for row in dist])
+    # A distância para o vértice 2 deve continuar infinita
+    assert d[0][2] == float('inf')
+    assert p[0][2] is None
+
+def test_invalid_matrix_shape():
+    # Testar se o erro de matriz não quadrada é lançado
+    dist = [
+        [0, 5],
+        [5, 0, 1] # Linha com tamanho errado
+    ]
+    with pytest.raises(ValueError, match="A matriz de distâncias deve ser quadrada"):
+        floyd_warshall(dist)
+
+def test_single_node_graph():
+    # Testar comportamento com apenas um vértice
+    dist = [[0]]
+    d, p = floyd_warshall(dist)
+    assert d == [[0]]
+    assert p == [[None]]

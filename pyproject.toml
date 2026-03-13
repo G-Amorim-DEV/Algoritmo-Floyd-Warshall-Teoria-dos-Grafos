@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "floyd-warshall-amorim"
+version = "0.1.0"
+authors = [
+  { name="Amorim_dev", email="guilhermeamorimrochalima@gmail.com" },
+]
+description = "Implementação educacional do algoritmo de Floyd-Warshall com interface Streamlit."
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "pandas",
+    "numpy",
+    "networkx",
+    "matplotlib",
+    "seaborn",
+    "streamlit",
+    "pytest"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/G-Amorim-DEV/algoritmo-floyd-warshall-teoria-dos-grafos"

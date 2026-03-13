@@ -1,109 +1,98 @@
 import streamlit as st
 import pandas as pd
-import floyd
-import graph_visualization
+import seaborn as sns
+import matplotlib.pyplot as plt
+from floyd import floyd_warshall
+from graph_visualization import criar_grafo
 
-st.title("Floyd-Warshall Interactive")
+st.title("Algoritmo de Floyd-Warshall")
+st.markdown("""
+Este aplicativo calcula os caminhos mais curtos entre todos os pares de vértices em um grafo usando o algoritmo de Floyd-Warshall.
+""")
 
-# brief description of the algorithm and what the app shows
-st.markdown(
-    """
-    **Algoritmo de Floyd–Warshall**
+# Entrada do número de vértices
+n = st.number_input("Número de vértices", min_value=2, max_value=10, value=3, step=1)
 
-    O Floyd–Warshall é um algoritmo de programação dinâmica que calcula os
-    caminhos mais curtos entre *todos* os pares de vértices em um grafo
-    direcionado. Dada uma matriz de adjacência de pesos (onde um valor
-    grande ou infinito representa ausência de aresta), o método itera sobre
-    todos os vértices intermediários `k` e tenta melhorar a distância entre
-    cada par `(i, j)` usando `k` como ponto de passagem.
+# Entrada da matriz de distâncias
+st.subheader("Matriz de Distâncias")
+st.markdown("Insira as distâncias entre os vértices. Use 'inf' para infinito (sem conexão direta).")
+dist = []
+for i in range(n):
+    row = []
+    cols = st.columns(n)
+    for j in range(n):
+        if i == j:
+            val = 0
+        else:
+            val = cols[j].text_input(f"Distância {i+1} -> {j+1}", value="inf" if i != j else "0", key=f"dist_{i}_{j}")
+            val = float('inf') if val.lower() == 'inf' else float(val)
+        row.append(val)
+    dist.append(row)
 
-    Este aplicativo permite fornecer as matrizes de distâncias e de
-    predecessores e exibe as versões finais após a computação, além de
-    ilustrar o grafo resultante.
-    """
-)
+# Entrada da matriz de predecessores
+st.subheader("Matriz de Predecessores")
+st.markdown("Insira os predecessores iniciais. Use 0 para nenhum predecessor.")
+pred = []
+for i in range(n):
+    row = []
+    cols = st.columns(n)
+    for j in range(n):
+        if i == j:
+            val = 0
+        else:
+            val = cols[j].number_input(f"Predecessor {i+1} -> {j+1}", value=0, key=f"pred_{i}_{j}")
+        row.append(int(val))
+    pred.append(row)
 
-# allow user to directly upload CSV files for matrices
-upload_dist = st.file_uploader("Arquivo CSV da matriz de distâncias", type=["csv"])
-upload_pred = st.file_uploader("Arquivo CSV da matriz de predecessores", type=["csv"])
+# Opção para mostrar passos
+show_steps = st.checkbox("Mostrar passos intermediários")
 
-n = st.number_input("Número de vértices", min_value=1, step=1)
-
-# parse text areas if uploads not provided
-if upload_dist:
-    try:
-        dist_df = pd.read_csv(upload_dist, header=None)
-        dist = dist_df.values.tolist()
-    except Exception as e:
-        st.error(f"Erro ao ler matriz de distâncias: {e}")
-        dist = None
-else:
-    dist = None
-
-if upload_pred:
-    try:
-        pred_df = pd.read_csv(upload_pred, header=None)
-        pred = pred_df.values.tolist()
-    except Exception as e:
-        st.error(f"Erro ao ler matriz de predecessores: {e}")
-        pred = None
-else:
-    pred = None
-
-# allow manual text input if files not provided
-if dist is None:
-    st.write("Digite a matriz de distâncias (linhas separadas por ENTER, valores por espaço)")
-    dist_input = st.text_area("Matriz de distâncias")
-    try:
-        dist = [list(map(int, line.split())) for line in dist_input.strip().splitlines() if line]
-    except ValueError:
-        dist = None
-
-if pred is None:
-    st.write("Digite a matriz de predecessores (mesmo formato)")
-    pred_input = st.text_area("Matriz de predecessores")
-    try:
-        pred = [list(map(int, line.split())) for line in pred_input.strip().splitlines() if line]
-    except ValueError:
-        pred = None
-
-# option to see how the algorithm proceeds
-show_steps = st.checkbox("Mostrar etapas intermediárias")
+# Armazenar no session_state
+st.session_state["dist"] = dist
+st.session_state["pred"] = pred
+st.session_state["n"] = n
+st.session_state["show_steps"] = show_steps
 
 if st.button("Calcular"):
     try:
-        if dist is None or pred is None:
-            st.error("Matrizes incompletas")
-        elif len(dist) != n or len(pred) != n:
-            st.error("Dimensões das matrizes não batem com o número de vértices")
+        # Validação de dimensões
+        if len(dist) != n or any(len(row) != n for row in dist):
+            st.error(f"A matriz deve ser {n}x{n}. Verifique os dados introduzidos.")
+        elif len(pred) != n or any(len(row) != n for row in pred):
+            st.error(f"A matriz de predecessores deve ser {n}x{n}.")
         else:
+            # Execução do Algoritmo
             if show_steps:
-                dist, pred, steps = floyd.floyd_warshall(dist, pred, trace=True)
+                dist_final, pred_final, steps = floyd_warshall(dist, pred, trace=True)
             else:
-                dist, pred = floyd.floyd_warshall(dist, pred)
+                dist_final, pred_final = floyd_warshall(dist, pred)
                 steps = None
 
-            df_dist = pd.DataFrame(dist)
-            df_pred = pd.DataFrame(pred)
-            st.subheader("Matriz de distâncias")
-            st.dataframe(df_dist)
-            st.subheader("Matriz de predecessores")
-            st.dataframe(df_pred)
+            # Exibição dos Resultados em Abas
+            tab1, tab2, tab3 = st.tabs(["📊 Matrizes Finais", "🕸️ Grafo", "🌡️ Heatmap"])
 
-            if show_steps and steps is not None:
-                st.subheader("Etapas intermediárias")
-                for k, mat in enumerate(steps):
-                    st.markdown(f"**Após inserir vértice intermediário {k}**")
-                    st.dataframe(pd.DataFrame(mat))
+            with tab1:
+                st.subheader("Matriz de Distâncias Final")
+                st.dataframe(pd.DataFrame(dist_final))
+                st.subheader("Matriz de Predecessores Final")
+                st.dataframe(pd.DataFrame(pred_final))
 
-            st.subheader("Grafo gerado")
-            fig = graph_visualization.criar_grafo(dist)
-            st.pyplot(fig)
+            with tab2:
+                st.subheader("Visualização do Grafo")
+                fig_grafo = criar_grafo(dist_final)
+                st.pyplot(fig_grafo)
 
-            # allow download of results
-            csv1 = df_dist.to_csv(index=False).encode('utf-8')
-            csv2 = df_pred.to_csv(index=False).encode('utf-8')
-            st.download_button("Download dist CSV", csv1, "distancias.csv", "text/csv")
-            st.download_button("Download pred CSV", csv2, "predecessores.csv", "text/csv")
+            with tab3:
+                st.subheader("Heatmap de Intensidade de Distâncias")
+                fig_heat, ax = plt.subplots()
+                df_heat = pd.DataFrame(dist_final).replace(float('inf'), 999)
+                sns.heatmap(df_heat, annot=True, cmap="YlOrRd", ax=ax)
+                st.pyplot(fig_heat)
+
+            if show_steps and steps:
+                st.subheader("Passos Intermediários")
+                for step in steps:
+                    st.write(step)
+
     except Exception as e:
-        st.error(f"Erro: {e}")
+        st.error(f"Ocorreu um erro: {str(e)}")
